@@ -55,6 +55,7 @@ func MustLoad() *Config {
 	if err != nil {
 		log.Fatalf("cannot read the file : %s",err.Error())
 	}
+	
 
 	return &cfg
 }
