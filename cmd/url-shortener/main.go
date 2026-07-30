@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"pranayteja31/Urlshortener/internal/config"
+	student "pranayteja31/Urlshortener/internal/http/handlers/students"
 	"syscall"
 	"time"
 )
@@ -23,9 +24,7 @@ func main() {
 
 	//setting up the router
 	router := http.NewServeMux()
-	router.HandleFunc("GET /",func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Welcome to the url shortener home api"))
-	})
+	router.HandleFunc("GET /api/students",student.New())
 
 	//setup server
 	//1. make a new instance and add the server parameters to the server
