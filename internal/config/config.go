@@ -18,7 +18,7 @@ type Config struct{
 	// package go clean env for easy serializing of the parameters
 	Env string `yaml:"env" env:"ENV" env-required:"true"`
 	StoragePath string `yaml:"storage-path" env:"STORAGE_PATH" env-required:"true"`
-	HTTPServer
+	HTTPServer `yaml:"http-server"`
 
 }
  
@@ -55,7 +55,7 @@ func MustLoad() *Config {
 	if err != nil {
 		log.Fatalf("cannot read the file : %s",err.Error())
 	}
-	
+
 
 	return &cfg
 }

@@ -24,7 +24,7 @@ func main() {
 	//setup server
 	//1. make a new instance and add the server parameters to the server
 	Server := &http.Server{
-		Addr: cfg.Addr,
+		Addr: cfg.HTTPServer.Addr,
 		Handler: router,
 	}
 
