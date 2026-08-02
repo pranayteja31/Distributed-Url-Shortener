@@ -8,30 +8,22 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-//there is a config in the form of yaml and we need to serialize those values into go code
-
+//serializing the config paramters
 type HTTPServer struct{
 	Addr string `yaml:"address" env:"ADDRESS" env-required:"true"` //struct tags are enclosed in `` they help in serialize
 }
+
 type Config struct{
-	//Capitalizing make those values accessible from other packages
-	// package go clean env for easy serializing of the parameters
 	Env string `yaml:"env" env:"ENV" env-required:"true"`
 	StoragePath string `yaml:"storage-path" env:"STORAGE_PATH" env-required:"true"`
 	HTTPServer `yaml:"http-server"`
 
 }
- 
-//the struct is added to store the config variable and the serializzation is added
-// now we need to fetch the values and store them and load our server
-// for which we are using the mustload func
 
+
+//loader to load the config parameters
 func MustLoad() *Config {
-	//now first we have a yaml file with all those necessay parameters 
-	// while running the server we want the path of that yaml file so that we can fetch
 	var configPath string
-	//we are taking the i/p of config path from the flags of terminal
-	//flags are --> go build dlfj/dkhfsd -u .....(the things u mention here are called flags)
 
 	configPath = os.Getenv("CONFIG_PATH") //first check with .env files
 	if configPath == "" {
