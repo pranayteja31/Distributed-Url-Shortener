@@ -12,12 +12,22 @@ import (
 type HTTPServer struct{
 	Addr string `yaml:"address" env:"ADDRESS" env-required:"true"` //struct tags are enclosed in `` they help in serialize
 }
+type DBConfig struct{
+	DBHost string `yaml:"db-host" env:"DB_HOST" env-required:"true"`
+    DBPort string `yaml:"db-port" env:"DB_PORT" env-required:"true"`
+    DBUser string `yaml:"db-user" env:"DB_USER" env-required:"true"`
+    DBPassword string `yaml:"db-password" env:"DB_PASSWORD" env-required:"true"`
+    DBName string `yaml:"db-name" env:"DB_NAME" env-required:"true"`
+    SSLMode string `yaml:"db-sslmode" env:"DB_SSLMODE"`
+}
+
 
 type Config struct{
 	Env string `yaml:"env" env:"ENV" env-required:"true"`
 	StoragePath string `yaml:"storage-path" env:"STORAGE_PATH" env-required:"true"`
-	HTTPServer `yaml:"http-server"`
-
+	HTTPServer `yaml:"http-server" env-required:"true"`
+	DBConfig `yaml:"db-config" env-required:"true"`
+	
 }
 
 
@@ -51,3 +61,4 @@ func MustLoad() *Config {
 
 	return &cfg
 }
+

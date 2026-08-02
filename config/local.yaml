@@ -2,3 +2,10 @@ env: "dev"
 storage-path: "storage/storage.db"
 http-server:
   address: "localhost:8082"
+db-config:
+  db-host: "localhost"
+  db-port: "5432"
+  db-user: "url_user"
+  db-password: "yssnvpt@31"
+  db-name: "url_shortener"
+  db-sslmode: "disable"
