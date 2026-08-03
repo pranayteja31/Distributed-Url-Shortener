@@ -18,7 +18,7 @@ func NewRepository(db *sqlx.DB) *URLRepository {
 }
 
 //creating a new record
-func (r *URLRepository)create(url *models.URL) error{
+func (r *URLRepository)Create(url *models.URL) error{
 	q := `INSERT INTO urls(
 	short_code,
 	original_code,
