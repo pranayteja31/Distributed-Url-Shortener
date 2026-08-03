@@ -41,4 +41,18 @@ func DB_connection(){
 	}
 
 	fmt.Println("Successfully connected to PostgreSQL using environment variables!")
+
+	// queryBytes, err := os.ReadFile("migrations/000001_create_urls.up.sql")
+	// if err != nil {
+	// 	log.Fatalf("failed to read the sql file: %s", err)
+	// }
+	// createTableSQL := string(queryBytes)
+
+	// // 3. Execute the SQL statements
+	// _, err = DB.Exec(createTableSQL)
+	// if err != nil {
+	// 	log.Fatalf("Failed to execute SQL script: %v", err)
+	// }
+
+	// fmt.Println("SQL file executed successfully!")
 }
