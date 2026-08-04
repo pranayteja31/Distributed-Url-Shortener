@@ -2,12 +2,22 @@ package handlers
 
 import (
 	"net/http"
+	"pranayteja31/Urlshortener/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
+type URLHandler struct {
+	service *services.URLServices
+}
+
+func NewHandler(service *services.URLServices) *URLHandler {
+	return &URLHandler{
+		service: service,
+	}
+}
 
 func CreateShortUrl(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message":"creates the short url"})
+	
 }
 
 func Redirect(c *gin.Context) {

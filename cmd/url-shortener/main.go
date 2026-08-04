@@ -2,10 +2,12 @@ package main
 
 //this is the main entry point of the application
 import (
-	"net/http"
 	"pranayteja31/Urlshortener/internal/config"
 	"pranayteja31/Urlshortener/internal/db"
+	"pranayteja31/Urlshortener/internal/handlers"
+	"pranayteja31/Urlshortener/internal/repository"
 	"pranayteja31/Urlshortener/internal/routes"
+	"pranayteja31/Urlshortener/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,31 +16,23 @@ import (
 
 func main() {
 	cfg := config.MustLoad()
-	//dbconnection
-	db.DB_connection()
-	defer db.DB.Close()
-	
+
+	dbConn := db.DB_connection()
+	defer dbConn.Close()
+
 	//init the router
 	router := gin.Default()
-	//registering the routers created
-	routes.RegisterRoutes(router)
-	router.GET("/status", func(c *gin.Context) {
-		var currentTime string
-		
-		// Query the database directly
-		err := db.DB.QueryRow("SELECT NOW()").Scan(&currentTime)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database query failed"})
-			return
-		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"status":        "Database connected successfully!",
-			"database_time": currentTime,
-		})
-	})
+	//register repos with db
+	repo := repository.NewRepository(dbConn)
+	//register services with repos
+	services := services.NewURLServices(repo)
+	//register handlers with the services
+	handlers := handlers.NewHandler(services)
 
+	//registering the routers with handlers
+	routes.RegisterRoutes(router, handlers)
+
+	//start the server
 	router.Run(cfg.HTTPServer.Addr)
-	
-	
 }

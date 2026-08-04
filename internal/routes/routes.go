@@ -6,24 +6,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(router *gin.Engine){
+func RegisterRoutes(router *gin.Engine,handler *handlers.URLHandler){
 	//routing the routes with handlers
 
+	v1 := router.Group("/api/v1")
+	url := v1.Group("/url")
+	//"/api/v1/..."
 	//creation of the short url
-	router.POST("/create-url",handlers.CreateShortUrl)
+	url.POST("/create",handlers.CreateShortUrl)
+	//get all the details about the url
+	url.POST("/get/:id",handlers.GetUrl)
+	//list all urls
+	url.GET("/list",handlers.ListUrls)
+	//update the url
+	url.PUT("/update/:id",handlers.UpdateUrl)
+	//delete the url
+	url.DELETE("/delete/:id",handlers.DeletUrl)
 
 	//creation of the short url
-	router.GET("/redirect",handlers.Redirect)
-
-	//creation of the short url
-	router.POST("/get-url",handlers.GetUrl)
-
-	//creation of the short url
-	router.GET("/list-url",handlers.ListUrls)
-
-	//creation of the short url
-	router.PUT("/update-url",handlers.UpdateUrl)
-
-	//creation of the short url
-	router.DELETE("/delete-url",handlers.DeletUrl)
+	router.GET("/:id",handlers.Redirect)
 }
