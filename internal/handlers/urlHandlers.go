@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
 //struct
 type URLHandler struct {
 	service *services.URLServices
@@ -41,7 +42,7 @@ func (h *URLHandler) CreateShortUrl(c *gin.Context) {
 }
 //redirect
 func (h *URLHandler)Redirect(c *gin.Context) {
-	shortCode := c.Query("shortCode")
+	shortCode := c.Param("shortCode")
 	orgCode,err := h.service.RedirectURL(shortCode)
 	if err != nil {
 		c.JSON(http.StatusNotFound,gin.H{"message": "Unable to Fetch Details","error": err.Error()})
@@ -52,13 +53,13 @@ func (h *URLHandler)Redirect(c *gin.Context) {
 }
 //get url by id
 func (h *URLHandler)GetUrl(c *gin.Context) {
-	idStr := c.Query("id")
-	id,err := strconv.Atoi(idStr)
+	idStr := c.Param("id")
+	id,err := strconv.ParseInt(idStr,10,64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest,gin.H{"message": "Invalid Id","error": err.Error()})
 		return
 	}
-	urlDetails, err := h.service.GetURL(int64(id))
+	urlDetails, err := h.service.GetURL(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound,gin.H{"message": "URL Not Found","error": err.Error()})
 		return
@@ -77,7 +78,7 @@ func (h *URLHandler)ListUrls(c *gin.Context) {
 }
 //update url details
 func (h *URLHandler)UpdateUrl(c *gin.Context) {
-	idStr := c.Query("id")
+	idStr := c.Param("id")
 	orgUrl := c.PostForm("orgUrl")
 	expStr := c.PostForm("exp")
 
@@ -105,7 +106,7 @@ func (h *URLHandler)UpdateUrl(c *gin.Context) {
 
 //delete url
 func (h *URLHandler)DeleteUrl(c *gin.Context) {
-	idStr := c.Query("id")
+	idStr := c.Param("id")
 	id,err := strconv.ParseInt(idStr,10,64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest,gin.H{"message": "Invalid Id", "error": err.Error()})
