@@ -8,16 +8,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+//struct
 type URLHandler struct {
 	service *services.URLServices
 }
-
+//constructor
 func NewHandler(service *services.URLServices) *URLHandler {
 	return &URLHandler{
 		service: service,
 	}
 }
-
+//creation
 func (h *URLHandler) CreateShortUrl(c *gin.Context) {
 	orgUrl := c.PostForm("orgUrl")
 	if orgUrl == "" {
@@ -38,7 +39,7 @@ func (h *URLHandler) CreateShortUrl(c *gin.Context) {
 	c.JSON(http.StatusCreated,gin.H{"message": "URL created Successfully!", "data": createdUrl})
 
 }
-
+//redirect
 func (h *URLHandler)Redirect(c *gin.Context) {
 	shortCode := c.Query("shortCode")
 	orgCode,err := h.service.RedirectURL(shortCode)
@@ -49,7 +50,7 @@ func (h *URLHandler)Redirect(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect,orgCode)
 
 }
-
+//get url by id
 func (h *URLHandler)GetUrl(c *gin.Context) {
 	idStr := c.Query("id")
 	id,err := strconv.Atoi(idStr)
@@ -65,7 +66,7 @@ func (h *URLHandler)GetUrl(c *gin.Context) {
 	c.JSON(http.StatusOK,gin.H{"message": "ID found", "data": urlDetails})
 
 }
-
+//list all available urls
 func (h *URLHandler)ListUrls(c *gin.Context) {
 	UrlList, err := h.service.ListURLs()
 	if err != nil {
@@ -74,7 +75,7 @@ func (h *URLHandler)ListUrls(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK,gin.H{"message":"All Urls fetched successfully", "data": UrlList})
 }
-
+//update url details
 func (h *URLHandler)UpdateUrl(c *gin.Context) {
 	idStr := c.Query("id")
 	orgUrl := c.PostForm("orgUrl")
@@ -101,6 +102,18 @@ func (h *URLHandler)UpdateUrl(c *gin.Context) {
 	}
 	c.JSON(http.StatusAccepted,gin.H{"message": "Update Successful", "data": updateUrl})
 }
-func DeletUrl(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message":"deletes the short url"})
+
+//delete url
+func (h *URLHandler)DeleteUrl(c *gin.Context) {
+	idStr := c.Query("id")
+	id,err := strconv.ParseInt(idStr,10,64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest,gin.H{"message": "Invalid Id", "error": err.Error()})
+	}
+	if err = h.service.DeleteURL(id); err != nil {
+		c.JSON(http.StatusNotFound,gin.H{"message": "Delete Unsuccessful", "error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK,gin.H{"message": "URL Deleted Successful"})
+
 }

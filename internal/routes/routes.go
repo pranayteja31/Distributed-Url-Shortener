@@ -21,7 +21,7 @@ func RegisterRoutes(router *gin.Engine, handler *handlers.URLHandler){
 	//update the url
 	url.PUT("/update/:id",handler.UpdateUrl)
 	//delete the url
-	url.DELETE("/delete/:id",handlers.DeletUrl)
+	url.DELETE("/delete/:id",handler.DeleteUrl)
 
 	//creation of the short url
 	router.GET("/:shortCode",handler.Redirect)
