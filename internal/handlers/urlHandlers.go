@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"pranayteja31/Urlshortener/internal/services"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,8 +18,25 @@ func NewHandler(service *services.URLServices) *URLHandler {
 	}
 }
 
-func CreateShortUrl(c *gin.Context) {
-	
+func (h *URLHandler) CreateShortUrl(c *gin.Context) {
+	orgUrl := c.PostForm("orgUrl")
+	if orgUrl == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"The url field is empty", "error": "or_url is required"})
+		return
+	}
+	expStr := c.PostForm("exp")
+	exp,err := strconv.Atoi(expStr)
+	if err != nil {
+        exp = 30 // Default expiry if left blank or invalid
+    }
+
+	createdUrl, err := h.service.CreateShortURL(orgUrl,exp)
+	if err != nil {
+		c.JSON(http.StatusBadRequest,gin.H{"message":"Failed to create URL", "error":err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated,gin.H{"message": "URL created Successfully!", "data": createdUrl})
+
 }
 
 func Redirect(c *gin.Context) {

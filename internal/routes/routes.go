@@ -6,18 +6,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(router *gin.Engine,handler *handlers.URLHandler){
+func RegisterRoutes(router *gin.Engine, handler *handlers.URLHandler){
 	//routing the routes with handlers
 
 	v1 := router.Group("/api/v1")
 	url := v1.Group("/url")
 	//"/api/v1/..."
 	//creation of the short url
-	url.POST("/create",handlers.CreateShortUrl)
+	url.POST("/create", handler.CreateShortUrl)
 	//get all the details about the url
-	url.POST("/get/:id",handlers.GetUrl)
+	url.POST("/get/:id",handler.GetUrl)
 	//list all urls
-	url.GET("/list",handlers.ListUrls)
+	url.GET("/list",handler.ListUrls)
 	//update the url
 	url.PUT("/update/:id",handlers.UpdateUrl)
 	//delete the url

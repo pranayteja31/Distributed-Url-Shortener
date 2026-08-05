@@ -21,7 +21,7 @@ func NewURLServices(repo *repository.URLRepository) *URLServices {
 }
 
 //service of url
-func (s *URLServices) CreateShortURL(originalURL string, exp int) error {
+func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL,error) {
 	// Generate a unique short code
 	var shortCode string
 
@@ -49,8 +49,11 @@ func (s *URLServices) CreateShortURL(originalURL string, exp int) error {
 		ExpiresAt:   &expiry,
 		ClickCount:  0,
 	}
-
-	return s.repo.Create(&newURL)
+	err := s.repo.Create(&newURL)
+    if err != nil {
+        return nil, err
+    }
+	return &newURL,nil
 }
 
 //5.updation of the url
