@@ -36,7 +36,7 @@ func (r *URLRepository)Create(url *models.URL) error{
 //finding the url by short code
 func (r *URLRepository)FindByShortCode(code string) (*models.URL,error){
 	var url models.URL
-	q := `SELECT id,short_code,original_code,created_at,expires_at,click_count FROM urls WHERE short_code=$1; `
+	q := `SELECT id,short_code,original_url,created_at,expires_at,click_count FROM urls WHERE short_code=$1; `
 	err := r.db.Get(&url,q,code)
 	if err != nil {
 		return nil,err
@@ -47,7 +47,7 @@ func (r *URLRepository)FindByShortCode(code string) (*models.URL,error){
 //finding the url by original code
 func (r *URLRepository)FindByOriginalCode(code string) (*models.URL,error){
 	var url models.URL
-	q := `SELECT id,short_code,original_code,created_at,expires_at,click_count FROM urls WHERE original_code=$1; `
+	q := `SELECT id,short_code,original_url,created_at,expires_at,click_count FROM urls WHERE original_code=$1; `
 	err := r.db.Get(&url,q,code)
 	if err != nil {
 		return nil,err
@@ -58,7 +58,7 @@ func (r *URLRepository)FindByOriginalCode(code string) (*models.URL,error){
 //finding by id
 func (r *URLRepository)FindByID(id int64) (*models.URL,error) {
 	var url models.URL
-	q := `SELECT id,short_code,original_code,created_at,expires_at,click_count FROM urls WHERE id=$1; `
+	q := `SELECT id,short_code,original_url,created_at,expires_at,click_count FROM urls WHERE id=$1; `
 	err := r.db.Get(&url,q,id)
 	if err != nil {
 		return nil,err
