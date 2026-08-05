@@ -71,19 +71,15 @@ func (r *URLRepository)Update(url *models.URL) error {
 	query := `
 		UPDATE urls
 		SET
-			short_code = $1,
-			original_url = $2,
-			expires_at = $3,
-			click_count = $4
-		WHERE id = $5;
+			original_url = $1,
+			expires_at = $2
+		WHERE id = $3;
 	`
 
 	_, err := r.db.Exec(
 		query,
-		url.ShortCode,
 		url.OriginalURL,
 		url.ExpiresAt,
-		url.ClickCount,
 		url.ID,
 	)
 

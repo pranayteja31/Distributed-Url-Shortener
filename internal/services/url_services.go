@@ -55,10 +55,27 @@ func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL,e
     }
 	return &newURL,nil
 }
+//get url
+func (s *URLServices) GetURL(id int64) (*models.URL,error) {
+	return s.repo.FindByID(id)
+}
 
 //5.updation of the url
-func (s *URLServices) UpdateURL(url *models.URL) error {
-	return s.repo.Update(url)
+func (s *URLServices) UpdateURL(url *models.URL,exp int) (*models.URL, error) {
+	existingUrl,err := s.repo.FindByID(url.ID)
+	if err != nil {
+		return nil,err
+	}
+	existingUrl.OriginalURL = url.OriginalURL
+	expiresAt := time.Now().Add(time.Duration(exp) * 24 * time.Hour)
+	existingUrl.ExpiresAt = &expiresAt
+
+	
+	err = s.repo.Update(existingUrl)
+	if err != nil{
+		return nil,err
+	}
+	return existingUrl,nil
 }
 
 //6. delete created url
