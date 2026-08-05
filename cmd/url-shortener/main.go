@@ -34,5 +34,8 @@ func main() {
 	routes.RegisterRoutes(router, handlers)
 
 	//start the server
-	router.Run(cfg.HTTPServer.Addr)
+	err:=router.Run(cfg.HTTPServer.Addr)
+	if err != nil {
+		panic(err)
+	}
 }
