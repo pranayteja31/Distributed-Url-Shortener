@@ -23,5 +23,6 @@ func NewRedisClient(cfg *config.RedisConfig)(*redis.Client,error){
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil,err
 	}
+	fmt.Println("Redis Connected Successfully!")
 	return client,nil
 }
