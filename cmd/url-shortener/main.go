@@ -2,6 +2,7 @@ package main
 
 //this is the main entry point of the application
 import (
+	"pranayteja31/Urlshortener/internal/cache"
 	"pranayteja31/Urlshortener/internal/config"
 	"pranayteja31/Urlshortener/internal/db"
 	"pranayteja31/Urlshortener/internal/handlers"
@@ -19,6 +20,12 @@ func main() {
 
 	dbConn := db.DB_connection()
 	defer dbConn.Close()
+	//init Redis
+	redisClient,err := cache.NewRedisClient(&cfg.RedisConfig)
+	if err != nil {
+		panic(err)
+	}
+	defer redisClient.Close()
 
 	//init the router
 	router := gin.Default()
@@ -34,7 +41,7 @@ func main() {
 	routes.RegisterRoutes(router, handlers)
 
 	//start the server
-	err:=router.Run(cfg.HTTPServer.Addr)
+	err = router.Run(cfg.HTTPServer.Addr)
 	if err != nil {
 		panic(err)
 	}
