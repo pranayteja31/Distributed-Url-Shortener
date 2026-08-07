@@ -11,14 +11,21 @@ type RedisCache struct {
 	client *redis.Client
 }
 
-func NewCache(client *redis.Client) Cache{
+func NewRedisCache(client *redis.Client) Cache{
 	return &RedisCache{
 		client: client,
 	}
 }
 //get method
-func (r *RedisCache)Get(ctx context.Context,key string)([]byte,error){
-	return r.client.Get(ctx,key).Bytes()
+func (r *RedisCache)Get(ctx context.Context,key string)([]byte,bool,error){
+	data,err := r.client.Get(ctx,key).Bytes()
+	if err == redis.Nil {
+		return nil,false,nil
+	}
+	if err != nil {
+		return nil,false,err
+	}
+	return data,true,nil
 }
 //set method
 func (r *RedisCache)Set(ctx context.Context,key string, value []byte,ttl time.Duration) error{

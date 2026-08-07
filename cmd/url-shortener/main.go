@@ -27,13 +27,16 @@ func main() {
 	}
 	defer redisClient.Close()
 
+	cacheStore := cache.NewRedisCache(redisClient)
+
+
 	//init the router
 	router := gin.Default()
 
 	//register repos with db
 	repo := repository.NewRepository(dbConn)
 	//register services with repos
-	services := services.NewURLServices(repo)
+	services := services.NewURLServices(repo,cacheStore)
 	//register handlers with the services
 	handlers := handlers.NewHandler(services)
 

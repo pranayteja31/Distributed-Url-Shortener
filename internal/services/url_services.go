@@ -1,7 +1,10 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
+	"pranayteja31/Urlshortener/internal/cache"
 	"pranayteja31/Urlshortener/internal/models"
 	"pranayteja31/Urlshortener/internal/repository"
 	"pranayteja31/Urlshortener/internal/utils"
@@ -11,12 +14,14 @@ import (
 //struct
 type URLServices struct {
 	repo *repository.URLRepository
+	cache cache.Cache
 }
 
 //constructor
-func NewURLServices(repo *repository.URLRepository) *URLServices {
+func NewURLServices(repo *repository.URLRepository, cache cache.Cache) *URLServices {
 	return &URLServices{
 		repo: repo,
+		cache: cache,
 	}
 }
 
@@ -53,6 +58,18 @@ func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL,e
     if err != nil {
         return nil, err
     }
+	//redis cache of the new url created
+	ctx := context.Background()
+
+	data, err := json.Marshal(newURL)
+	if err == nil {
+		_ = s.cache.Set(
+			ctx,
+			cache.URLKey(newURL.ShortCode),
+			data,
+			30*time.Minute,
+		)
+	}
 	return &newURL,nil
 }
 //get url
@@ -75,14 +92,34 @@ func (s *URLServices) UpdateURL(url *models.URL,exp int) (*models.URL, error) {
 	if err != nil{
 		return nil,err
 	}
+	ctx := context.Background()
+
+	_ = s.cache.Delete(ctx,cache.URLKey(existingUrl.ShortCode))
 	return existingUrl,nil
 }
 
 //6. delete created url
 func (s *URLServices) DeleteURL(id int64) error {
-	return s.repo.Delete(id)
-}
 
+	url, err := s.repo.FindByID(id)
+	if err != nil {
+		return err
+	}
+
+	err = s.repo.Delete(id)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+
+	_ = s.cache.Delete(
+		ctx,
+		cache.URLKey(url.ShortCode),
+	)
+
+	return nil
+}
 //7. list all the urls
 func (s *URLServices) ListURLs() ([]models.URL, error) {
 	return s.repo.List()
@@ -90,6 +127,24 @@ func (s *URLServices) ListURLs() ([]models.URL, error) {
 
 //8. increment the count when somebody clicks it
 func (s *URLServices) RedirectURL(shortCode string) (string, error) {
+	//redis cache logic
+	ctx := context.Background()
+	key := cache.URLKey(shortCode)
+
+	cacheData,found, err := s.cache.Get(ctx,key)
+	if found && err == nil {
+		var url models.URL
+		if err:= json.Unmarshal(cacheData,&url); err != nil{
+			if url.ExpiresAt != nil && time.Now().After(*url.ExpiresAt){
+				return "", errors.New("URL has expired")
+			}
+			if err:= s.repo.IncrementCount(url.ID); err != nil {
+				return "",err
+			}
+			
+			return url.OriginalURL,nil
+		}
+	}
 	// Fetch URL details
 	urlDetails, err := s.repo.FindByShortCode(shortCode)
 	if err != nil || urlDetails == nil {
@@ -106,5 +161,10 @@ func (s *URLServices) RedirectURL(shortCode string) (string, error) {
 		return "", err
 	}
 
+	data, err := json.Marshal(urlDetails)
+	if err == nil {
+		_ = s.cache.Set(ctx,key,data,30*time.Minute)
+	}
+	//return from postgreSql server
 	return urlDetails.OriginalURL, nil
 }
