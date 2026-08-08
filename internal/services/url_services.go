@@ -63,12 +63,16 @@ func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL,e
 
 	data, err := json.Marshal(newURL)
 	if err == nil {
-		_ = s.cache.Set(
+		ttl := cache.URLTTL(newURL.ExpiresAt)
+		if ttl > 0 {
+			_ = s.cache.Set(
 			ctx,
 			cache.URLKey(newURL.ShortCode),
 			data,
-			30*time.Minute,
-		)
+			ttl,
+			)
+		}
+		
 	}
 	return &newURL,nil
 }
@@ -163,7 +167,10 @@ func (s *URLServices) RedirectURL(shortCode string) (string, error) {
 
 	data, err := json.Marshal(urlDetails)
 	if err == nil {
-		_ = s.cache.Set(ctx,key,data,30*time.Minute)
+		ttl := cache.URLTTL(urlDetails.ExpiresAt)
+		if ttl > 0 {
+			_ = s.cache.Set(ctx,key,data,ttl)
+		}
 	}
 	//return from postgreSql server
 	return urlDetails.OriginalURL, nil
