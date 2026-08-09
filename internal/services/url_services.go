@@ -36,6 +36,10 @@ func NewURLServices(repo *repository.URLRepository, cache cache.Cache) *URLServi
 
 //service of url
 func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL,error) {
+	//validate url
+	if err:= utils.ValidateURL(originalURL); err != nil {
+		return nil,err
+	}
 	// Generate a unique short code
 	var shortCode string
 
@@ -104,6 +108,11 @@ func (s *URLServices) GetURL(id int64) (*models.URL,error) {
 
 //5.updation of the url
 func (s *URLServices) UpdateURL(url *models.URL,exp int) (*models.URL, error) {
+	//validate url
+	if err:= utils.ValidateURL(url.OriginalURL); err != nil {
+		return nil,err
+	}
+	//
 	existingUrl,err := s.repo.FindByID(url.ID)
 	if err != nil {
 		if errors.Is(err,sql.ErrNoRows){
@@ -115,6 +124,7 @@ func (s *URLServices) UpdateURL(url *models.URL,exp int) (*models.URL, error) {
 		return nil, ErrURLNotFound
 	}
 	existingUrl.OriginalURL = url.OriginalURL
+	
 	expiresAt := time.Now().Add(time.Duration(exp) * 24 * time.Hour)
 	existingUrl.ExpiresAt = &expiresAt
 

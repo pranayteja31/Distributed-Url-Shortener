@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"pranayteja31/Urlshortener/internal/models"
 	"pranayteja31/Urlshortener/internal/services"
+	"pranayteja31/Urlshortener/internal/utils"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -40,8 +41,43 @@ func (h *URLHandler) CreateShortUrl(c *gin.Context) {
 
 	createdUrl, err := h.service.CreateShortURL(orgUrl,exp)
 	if err != nil {
-		c.JSON(http.StatusBadRequest,gin.H{"message":"Failed to create URL", "error":"Failed to Create URL"})
-		return
+		switch {
+		case errors.Is(err, utils.ErrEmptyURL):
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "URL cannot be empty",
+			})
+			return
+
+		case errors.Is(err, utils.ErrURLTooLong):
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "URL exceeds maximum length",
+			})
+			return
+
+		case errors.Is(err, utils.ErrInvalidURL):
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid URL",
+			})
+			return
+
+		case errors.Is(err, utils.ErrUnsupportedScheme):
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "only HTTP and HTTPS URLs are supported",
+			})
+			return
+
+		case errors.Is(err, utils.ErrMissingURLHost):
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "URL host is missing",
+			})
+			return
+
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to create URL",
+			})
+			return
+		}
 	}
 	c.JSON(http.StatusCreated,gin.H{"message": "URL created Successfully!", "data": createdUrl})
 
@@ -146,6 +182,35 @@ func (h *URLHandler)UpdateUrl(c *gin.Context) {
 	updateUrl, err := h.service.UpdateURL(&newUrl,exp)
 	if err != nil {
 		switch {
+		case errors.Is(err, utils.ErrEmptyURL):
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "URL cannot be empty",
+			})
+			return
+
+		case errors.Is(err, utils.ErrURLTooLong):
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "URL exceeds maximum length",
+			})
+			return
+
+		case errors.Is(err, utils.ErrInvalidURL):
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid URL",
+			})
+			return
+
+		case errors.Is(err, utils.ErrUnsupportedScheme):
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "only HTTP and HTTPS URLs are supported",
+			})
+			return
+
+		case errors.Is(err, utils.ErrMissingURLHost):
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "URL host is missing",
+			})
+			return
 		case errors.Is(err, services.ErrURLNotFound):
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": "URL not found",
