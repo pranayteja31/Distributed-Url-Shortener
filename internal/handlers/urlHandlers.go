@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"pranayteja31/Urlshortener/internal/models"
 	"pranayteja31/Urlshortener/internal/services"
@@ -23,18 +24,23 @@ func NewHandler(service *services.URLServices) *URLHandler {
 func (h *URLHandler) CreateShortUrl(c *gin.Context) {
 	orgUrl := c.PostForm("orgUrl")
 	if orgUrl == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message":"The url field is empty", "error": "or_url is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"message":"The url field is empty", "error": "orgUrl is required"})
 		return
 	}
 	expStr := c.PostForm("exp")
-	exp,err := strconv.Atoi(expStr)
-	if err != nil {
-        exp = 30 // Default expiry if left blank or invalid
+	exp := 30
+	if expStr != "" {
+        exp,err := strconv.Atoi(expStr)
+		if err != nil || exp <= 0 {
+			c.JSON(http.StatusBadRequest,gin.H{"error":"Invalid expiry"})
+			return
+		}
+		
     }
 
 	createdUrl, err := h.service.CreateShortURL(orgUrl,exp)
 	if err != nil {
-		c.JSON(http.StatusBadRequest,gin.H{"message":"Failed to create URL", "error":err.Error()})
+		c.JSON(http.StatusBadRequest,gin.H{"message":"Failed to create URL", "error":"Failed to Create URL"})
 		return
 	}
 	c.JSON(http.StatusCreated,gin.H{"message": "URL created Successfully!", "data": createdUrl})
@@ -43,38 +49,73 @@ func (h *URLHandler) CreateShortUrl(c *gin.Context) {
 //redirect
 func (h *URLHandler)Redirect(c *gin.Context) {
 	shortCode := c.Param("shortCode")
-	orgCode,err := h.service.RedirectURL(shortCode)
-	if err != nil {
-		c.JSON(http.StatusNotFound,gin.H{"message": "Unable to Fetch Details","error": err.Error()})
+	if shortCode == "" {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"error": "Shortcode required",
+		})
 		return
 	}
-	c.Redirect(http.StatusTemporaryRedirect,orgCode)
+	OriginalURL,err := h.service.RedirectURL(shortCode)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrURLNotFound):
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "URL not found",
+			})
+			return
+
+		case errors.Is(err, services.ErrURLNotFound):
+			c.JSON(http.StatusGone, gin.H{
+				"error": "URL has expired",
+			})
+			return
+
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "internal server error",
+			})
+			return
+		}
+	}
+
+	c.Redirect(http.StatusTemporaryRedirect,OriginalURL)
 
 }
 //get url by id
 func (h *URLHandler)GetUrl(c *gin.Context) {
 	idStr := c.Param("id")
 	id,err := strconv.ParseInt(idStr,10,64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest,gin.H{"message": "Invalid Id","error": err.Error()})
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest,gin.H{"error": "Invalid ID"})
 		return
 	}
 	urlDetails, err := h.service.GetURL(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound,gin.H{"message": "URL Not Found","error": err.Error()})
-		return
+		switch {
+		case errors.Is(err, services.ErrURLNotFound):
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "URL not found",
+			})
+			return
+
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Internal server error",
+			})
+			return
+		}
 	}
-	c.JSON(http.StatusOK,gin.H{"message": "ID found", "data": urlDetails})
+	c.JSON(http.StatusOK,gin.H{"message": "URL found", "data": urlDetails})
 
 }
 //list all available urls
 func (h *URLHandler)ListUrls(c *gin.Context) {
 	UrlList, err := h.service.ListURLs()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError,gin.H{"message": "Something went Wrong", "error": err.Error()})
+		c.JSON(http.StatusInternalServerError,gin.H{"message": "Something went Wrong", "error": "Internal Server Error"})
 		return
 	}
-	c.JSON(http.StatusOK,gin.H{"message":"All Urls fetched successfully", "data": UrlList})
+	c.JSON(http.StatusOK,gin.H{"message":"All URLs fetched successfully", "data": UrlList})
 }
 //update url details
 func (h *URLHandler)UpdateUrl(c *gin.Context) {
@@ -83,13 +124,19 @@ func (h *URLHandler)UpdateUrl(c *gin.Context) {
 	expStr := c.PostForm("exp")
 
 	id,err := strconv.ParseInt(idStr,10,64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest,gin.H{"message": "Invalid Id", "error": err.Error()})
+	if err != nil || id <=0 {
+		c.JSON(http.StatusBadRequest,gin.H{"error": "Invalid ID"})
 		return
 	}
+	if orgUrl == "" {
+		c.JSON(http.StatusBadRequest,gin.H{"error": "Original URL required"})
+		return
+	}
+
 	exp,err := strconv.Atoi(expStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest,gin.H{"message": "Invalid Expiry", "error": err.Error()})
+	if err != nil || exp <= 0 {
+		c.JSON(http.StatusBadRequest,gin.H{"error": "Invalid Expiry"})
+		return
 	}
 
 	newUrl := models.URL{
@@ -98,8 +145,19 @@ func (h *URLHandler)UpdateUrl(c *gin.Context) {
 	}
 	updateUrl, err := h.service.UpdateURL(&newUrl,exp)
 	if err != nil {
-		c.JSON(http.StatusBadRequest,gin.H{"message": "Update Unsuccessful", "error": err.Error()})
-		return
+		switch {
+		case errors.Is(err, services.ErrURLNotFound):
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "URL not found",
+			})
+			return
+
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to update URL",
+			})
+			return
+		}
 	}
 	c.JSON(http.StatusAccepted,gin.H{"message": "Update Successful", "data": updateUrl})
 }
@@ -108,12 +166,24 @@ func (h *URLHandler)UpdateUrl(c *gin.Context) {
 func (h *URLHandler)DeleteUrl(c *gin.Context) {
 	idStr := c.Param("id")
 	id,err := strconv.ParseInt(idStr,10,64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest,gin.H{"message": "Invalid Id", "error": err.Error()})
+	if err != nil || id<=0 {
+		c.JSON(http.StatusBadRequest,gin.H{"error": "Invalid ID"})
+		return
 	}
 	if err = h.service.DeleteURL(id); err != nil {
-		c.JSON(http.StatusNotFound,gin.H{"message": "Delete Unsuccessful", "error": err.Error()})
-		return
+		switch {
+		case errors.Is(err, services.ErrURLNotFound):
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "URL not found",
+			})
+			return
+
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to delete URL",
+			})
+			return
+		}
 	}
 	c.JSON(http.StatusOK,gin.H{"message": "URL Deleted Successful"})
 
