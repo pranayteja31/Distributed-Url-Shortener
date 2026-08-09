@@ -6,11 +6,16 @@ import (
 	"pranayteja31/Urlshortener/internal/config"
 	"pranayteja31/Urlshortener/internal/db"
 	"pranayteja31/Urlshortener/internal/handlers"
+	middleware "pranayteja31/Urlshortener/internal/middlerware"
 	"pranayteja31/Urlshortener/internal/repository"
 	"pranayteja31/Urlshortener/internal/routes"
 	"pranayteja31/Urlshortener/internal/services"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"pranayteja31/Urlshortener/internal/metrics"
 )
 
 
@@ -29,9 +34,13 @@ func main() {
 
 	cacheStore := cache.NewRedisCache(redisClient)
 
-
+	metrics.Register()
 	//init the router
 	router := gin.Default()
+
+	//metrics
+	router.Use(middleware.PrometheusMiddleware())
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	//register repos with db
 	repo := repository.NewRepository(dbConn)

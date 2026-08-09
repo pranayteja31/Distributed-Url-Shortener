@@ -2,8 +2,8 @@ package cache
 
 import (
 	"context"
+	"pranayteja31/Urlshortener/internal/metrics"
 	"time"
-
 	"github.com/redis/go-redis/v9"
 )
 
@@ -18,7 +18,10 @@ func NewRedisCache(client *redis.Client) Cache{
 }
 //get method
 func (r *RedisCache)Get(ctx context.Context,key string)([]byte,bool,error){
+	redisStart := time.Now()
 	data,err := r.client.Get(ctx,key).Bytes()
+	metrics.ObserveRedisLatency(redisStart)
+
 	if err == redis.Nil {
 		return nil,false,nil
 	}

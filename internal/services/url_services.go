@@ -2,13 +2,22 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"pranayteja31/Urlshortener/internal/cache"
+	"pranayteja31/Urlshortener/internal/metrics"
 	"pranayteja31/Urlshortener/internal/models"
 	"pranayteja31/Urlshortener/internal/repository"
 	"pranayteja31/Urlshortener/internal/utils"
 	"time"
+)
+
+//custom errors
+var (
+	ErrURLNotFound = errors.New("url not found")
+	ErrUrlExpired = errors.New("url has expired")
 )
 
 //struct
@@ -35,8 +44,10 @@ func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL,e
 
 		existing, err := s.repo.FindByShortCode(shortCode)
 		if err != nil {
-			// If no rows found, code is available
-			break
+			if errors.Is(err,sql.ErrNoRows) {
+				break
+			}
+			return nil,err
 		}
 
 		if existing == nil {
@@ -78,14 +89,30 @@ func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL,e
 }
 //get url
 func (s *URLServices) GetURL(id int64) (*models.URL,error) {
-	return s.repo.FindByID(id)
+	url,err := s.repo.FindByID(id)
+	if err != nil {
+		if errors.Is(err,sql.ErrNoRows){
+			return nil,ErrURLNotFound
+		}
+		return nil,err
+	}
+	if url == nil {
+		return nil, ErrURLNotFound
+	}
+	return url,nil
 }
 
 //5.updation of the url
 func (s *URLServices) UpdateURL(url *models.URL,exp int) (*models.URL, error) {
 	existingUrl,err := s.repo.FindByID(url.ID)
 	if err != nil {
+		if errors.Is(err,sql.ErrNoRows){
+			return nil,ErrURLNotFound
+		}
 		return nil,err
+	}
+	if existingUrl == nil {
+		return nil, ErrURLNotFound
 	}
 	existingUrl.OriginalURL = url.OriginalURL
 	expiresAt := time.Now().Add(time.Duration(exp) * 24 * time.Hour)
@@ -107,11 +134,19 @@ func (s *URLServices) DeleteURL(id int64) error {
 
 	url, err := s.repo.FindByID(id)
 	if err != nil {
+		if errors.Is(err,sql.ErrNoRows){
+			return ErrURLNotFound
+		}
 		return err
 	}
-
+	if url == nil {
+		return ErrURLNotFound
+	}
 	err = s.repo.Delete(id)
 	if err != nil {
+		if errors.Is(err,sql.ErrNoRows){
+			return ErrURLNotFound
+		}
 		return err
 	}
 
@@ -136,11 +171,15 @@ func (s *URLServices) RedirectURL(shortCode string) (string, error) {
 	key := cache.URLKey(shortCode)
 
 	cacheData,found, err := s.cache.Get(ctx,key)
-	if found && err == nil {
+	if err == nil && found {
+		metrics.CacheHits.Inc()
 		var url models.URL
-		if err:= json.Unmarshal(cacheData,&url); err != nil{
+		if err:= json.Unmarshal(cacheData,&url); err == nil{
+
+			fmt.Println("CACHE HIT → Redis:", shortCode)
+
 			if url.ExpiresAt != nil && time.Now().After(*url.ExpiresAt){
-				return "", errors.New("URL has expired")
+				return "", ErrUrlExpired
 			}
 			if err:= s.repo.IncrementCount(url.ID); err != nil {
 				return "",err
@@ -149,22 +188,36 @@ func (s *URLServices) RedirectURL(shortCode string) (string, error) {
 			return url.OriginalURL,nil
 		}
 	}
+	metrics.CacheMisses.Inc()
+	fmt.Println("CACHE MISS → Redis:", shortCode)
+
 	// Fetch URL details
+	postgresStart := time.Now()
 	urlDetails, err := s.repo.FindByShortCode(shortCode)
-	if err != nil || urlDetails == nil {
+	metrics.ObservePostgresLatency(postgresStart)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrURLNotFound
+		}
+
 		return "", err
+	}
+
+	if urlDetails == nil {
+		return "", ErrURLNotFound
 	}
 
 	// Check expiry (if expiry is set)
 	if urlDetails.ExpiresAt != nil && time.Now().After(*urlDetails.ExpiresAt) {
-		return "", errors.New("URL has expired")
+		return "", ErrUrlExpired
 	}
 
 	// Increment click count
 	if err := s.repo.IncrementCount(urlDetails.ID); err != nil {
 		return "", err
 	}
-
+	//redis cache set
 	data, err := json.Marshal(urlDetails)
 	if err == nil {
 		ttl := cache.URLTTL(urlDetails.ExpiresAt)
