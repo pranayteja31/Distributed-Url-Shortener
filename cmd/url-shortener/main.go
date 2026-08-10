@@ -50,7 +50,7 @@ func main() {
 	handlers := handlers.NewHandler(services)
 
 	//registering the routers with handlers
-	routes.RegisterRoutes(router, handlers)
+	routes.RegisterRoutes(router, handlers,redisClient)
 
 	//start the server
 	err = router.Run(cfg.HTTPServer.Addr)
