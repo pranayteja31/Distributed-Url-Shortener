@@ -85,13 +85,14 @@ func (h *URLHandler) CreateShortUrl(c *gin.Context) {
 //redirect
 func (h *URLHandler)Redirect(c *gin.Context) {
 	shortCode := c.Param("shortCode")
+	
 	if shortCode == "" {
 		c.JSON(http.StatusBadRequest,gin.H{
 			"error": "Shortcode required",
 		})
 		return
 	}
-	OriginalURL,err := h.service.RedirectURL(shortCode,c.ClientIP(),c.GetHeader("User_Agent"),c.GetHeader("Referer"))
+	OriginalURL,err := h.service.RedirectURL(shortCode,c.ClientIP(),c.GetHeader("User-Agent"),c.GetHeader("Referer"))
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrURLNotFound):
