@@ -17,7 +17,7 @@ import (
 //custom errors
 var (
 	ErrURLNotFound = errors.New("url not found")
-	ErrUrlExpired = errors.New("url has expired")
+	ErrURLExpired = errors.New("url has expired")
 )
 
 //struct
@@ -189,7 +189,8 @@ func (s *URLServices) RedirectURL(shortCode string) (string, error) {
 			fmt.Println("CACHE HIT → Redis:", shortCode)
 
 			if url.ExpiresAt != nil && time.Now().After(*url.ExpiresAt){
-				return "", ErrUrlExpired
+				_ = s.cache.Delete(ctx,key)
+				return "", ErrURLExpired
 			}
 			if err:= s.repo.IncrementCount(url.ID); err != nil {
 				return "",err
@@ -220,7 +221,7 @@ func (s *URLServices) RedirectURL(shortCode string) (string, error) {
 
 	// Check expiry (if expiry is set)
 	if urlDetails.ExpiresAt != nil && time.Now().After(*urlDetails.ExpiresAt) {
-		return "", ErrUrlExpired
+		return "", ErrURLExpired
 	}
 
 	// Increment click count
