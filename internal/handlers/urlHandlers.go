@@ -91,7 +91,7 @@ func (h *URLHandler)Redirect(c *gin.Context) {
 		})
 		return
 	}
-	OriginalURL,err := h.service.RedirectURL(shortCode)
+	OriginalURL,err := h.service.RedirectURL(shortCode,c.ClientIP(),c.GetHeader("User_Agent"),c.GetHeader("Referer"))
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrURLNotFound):

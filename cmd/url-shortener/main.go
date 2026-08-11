@@ -2,6 +2,7 @@ package main
 
 //this is the main entry point of the application
 import (
+	"pranayteja31/Urlshortener/internal/analytics"
 	"pranayteja31/Urlshortener/internal/cache"
 	"pranayteja31/Urlshortener/internal/config"
 	"pranayteja31/Urlshortener/internal/db"
@@ -25,6 +26,9 @@ func main() {
 
 	dbConn := db.DB_connection()
 	defer dbConn.Close()
+	//analytics
+	clickRepo := repository.NewClickRepository(dbConn)
+	analyticsWorker := analytics.NewWorker(clickRepo,100)
 	//init Redis
 	redisClient,err := cache.NewRedisClient(&cfg.RedisConfig)
 	if err != nil {
@@ -45,7 +49,7 @@ func main() {
 	//register repos with db
 	repo := repository.NewRepository(dbConn)
 	//register services with repos
-	services := services.NewURLServices(repo,cacheStore)
+	services := services.NewURLServices(repo,cacheStore,analyticsWorker)
 	//register handlers with the services
 	handlers := handlers.NewHandler(services)
 

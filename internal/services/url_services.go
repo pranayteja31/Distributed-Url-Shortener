@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"pranayteja31/Urlshortener/internal/analytics"
 	"pranayteja31/Urlshortener/internal/cache"
 	"pranayteja31/Urlshortener/internal/metrics"
 	"pranayteja31/Urlshortener/internal/models"
@@ -24,13 +25,15 @@ var (
 type URLServices struct {
 	repo *repository.URLRepository
 	cache cache.Cache
+	analyticsWorker *analytics.Worker
 }
 
 //constructor
-func NewURLServices(repo *repository.URLRepository, cache cache.Cache) *URLServices {
+func NewURLServices(repo *repository.URLRepository, cache cache.Cache, analyticsWorker *analytics.Worker) *URLServices {
 	return &URLServices{
 		repo: repo,
 		cache: cache,
+		analyticsWorker: analyticsWorker,
 	}
 }
 
@@ -175,7 +178,7 @@ func (s *URLServices) ListURLs() ([]models.URL, error) {
 }
 
 //8. increment the count when somebody clicks it
-func (s *URLServices) RedirectURL(shortCode string) (string, error) {
+func (s *URLServices) RedirectURL(shortCode string,ipAddress string,userAgent string, referer string) (string, error) {
 	//redis cache logic
 	ctx := context.Background()
 	key := cache.URLKey(shortCode)
@@ -195,7 +198,18 @@ func (s *URLServices) RedirectURL(shortCode string) (string, error) {
 			if err:= s.repo.IncrementCount(url.ID); err != nil {
 				return "",err
 			}
-			
+			// Record analytics asynchronously.
+			if s.analyticsWorker != nil {
+				click := models.URLClick{
+					URLID:     url.ID,
+					ClickedAt: time.Now(),
+					IPAddress: ipAddress,
+					UserAgent: userAgent,
+					Referrer:  referer,
+				}
+
+				s.analyticsWorker.Record(click)
+			}
 			return url.OriginalURL,nil
 		}
 	}
@@ -227,6 +241,18 @@ func (s *URLServices) RedirectURL(shortCode string) (string, error) {
 	// Increment click count
 	if err := s.repo.IncrementCount(urlDetails.ID); err != nil {
 		return "", err
+	}
+	// Record analytics asynchronously.
+	if s.analyticsWorker != nil {
+		click := models.URLClick{
+			URLID:     urlDetails.ID,
+			ClickedAt: time.Now(),
+			IPAddress: ipAddress,
+			UserAgent: userAgent,
+			Referrer:  referer,
+		}
+
+		s.analyticsWorker.Record(click)
 	}
 	//redis cache set
 	data, err := json.Marshal(urlDetails)
