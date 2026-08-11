@@ -2,6 +2,7 @@ package main
 
 //this is the main entry point of the application
 import (
+	"context"
 	"pranayteja31/Urlshortener/internal/analytics"
 	"pranayteja31/Urlshortener/internal/cache"
 	"pranayteja31/Urlshortener/internal/config"
@@ -29,6 +30,12 @@ func main() {
 	//analytics
 	clickRepo := repository.NewClickRepository(dbConn)
 	analyticsWorker := analytics.NewWorker(clickRepo,100)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go analyticsWorker.Start(ctx)
+	
 	//init Redis
 	redisClient,err := cache.NewRedisClient(&cfg.RedisConfig)
 	if err != nil {
