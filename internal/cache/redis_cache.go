@@ -17,7 +17,7 @@ func NewRedisCache(client *redis.Client) Cache {
 	}
 }
 
-//get method
+// get method
 func (r *RedisCache) Get(ctx context.Context, key string) ([]byte, bool, error) {
 	redisStart := time.Now()
 	data, err := r.client.Get(ctx, key).Bytes()
@@ -32,12 +32,12 @@ func (r *RedisCache) Get(ctx context.Context, key string) ([]byte, bool, error) 
 	return data, true, nil
 }
 
-//set method
+// set method
 func (r *RedisCache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	return r.client.Set(ctx, key, value, ttl).Err()
 }
 
-//delete method
+// delete method
 func (r *RedisCache) Delete(ctx context.Context, key string) error {
 	return r.client.Del(ctx, key).Err()
 }

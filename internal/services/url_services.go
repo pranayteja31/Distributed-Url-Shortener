@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"pranayteja31/Urlshortener/internal/analytics"
 	"pranayteja31/Urlshortener/internal/cache"
 	"pranayteja31/Urlshortener/internal/metrics"
@@ -15,20 +14,20 @@ import (
 	"time"
 )
 
-//custom errors
+// custom errors
 var (
 	ErrURLNotFound = errors.New("url not found")
 	ErrURLExpired  = errors.New("url has expired")
 )
 
-//struct
+// struct
 type URLServices struct {
 	repo            *repository.URLRepository
 	cache           cache.Cache
 	analyticsWorker *analytics.Worker
 }
 
-//constructor
+// constructor
 func NewURLServices(repo *repository.URLRepository, cache cache.Cache, analyticsWorker *analytics.Worker) *URLServices {
 	return &URLServices{
 		repo:            repo,
@@ -37,7 +36,7 @@ func NewURLServices(repo *repository.URLRepository, cache cache.Cache, analytics
 	}
 }
 
-//service of url
+// service of url
 func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL, error) {
 	//validate url
 	if err := utils.ValidateURL(originalURL); err != nil {
@@ -95,7 +94,7 @@ func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL, 
 	return &newURL, nil
 }
 
-//get url
+// get url
 func (s *URLServices) GetURL(id int64) (*models.URL, error) {
 	url, err := s.repo.FindByID(id)
 	if err != nil {
@@ -110,7 +109,7 @@ func (s *URLServices) GetURL(id int64) (*models.URL, error) {
 	return url, nil
 }
 
-//5.updation of the url
+// 5.updation of the url
 func (s *URLServices) UpdateURL(url *models.URL, exp int) (*models.URL, error) {
 	//validate url
 	if err := utils.ValidateURL(url.OriginalURL); err != nil {
@@ -142,7 +141,7 @@ func (s *URLServices) UpdateURL(url *models.URL, exp int) (*models.URL, error) {
 	return existingUrl, nil
 }
 
-//6. delete created url
+// 6. delete created url
 func (s *URLServices) DeleteURL(id int64) error {
 
 	url, err := s.repo.FindByID(id)
@@ -173,12 +172,12 @@ func (s *URLServices) DeleteURL(id int64) error {
 	return nil
 }
 
-//7. list all the urls
+// 7. list all the urls
 func (s *URLServices) ListURLs() ([]models.URL, error) {
 	return s.repo.List()
 }
 
-//8. increment the count when somebody clicks it
+// 8. increment the count when somebody clicks it
 func (s *URLServices) RedirectURL(shortCode string, ipAddress string, userAgent string, referer string) (string, error) {
 	//redis cache logic
 	ctx := context.Background()
@@ -189,8 +188,6 @@ func (s *URLServices) RedirectURL(shortCode string, ipAddress string, userAgent 
 		metrics.CacheHits.Inc()
 		var url models.URL
 		if err := json.Unmarshal(cacheData, &url); err == nil {
-
-			fmt.Println("CACHE HIT → Redis:", shortCode)
 
 			if url.ExpiresAt != nil && time.Now().After(*url.ExpiresAt) {
 				_ = s.cache.Delete(ctx, key)
@@ -215,7 +212,6 @@ func (s *URLServices) RedirectURL(shortCode string, ipAddress string, userAgent 
 		}
 	}
 	metrics.CacheMisses.Inc()
-	fmt.Println("CACHE MISS → Redis:", shortCode)
 
 	// Fetch URL details
 	postgresStart := time.Now()

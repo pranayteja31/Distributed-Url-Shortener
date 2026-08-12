@@ -8,7 +8,7 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-//serializing the config paramters
+// serializing the config paramters
 type HTTPServer struct {
 	Addr string `yaml:"address" env:"ADDRESS" env-required:"true"` //struct tags are enclosed in `` they help in serialize
 }
@@ -21,7 +21,7 @@ type DBConfig struct {
 	SSLMode    string `yaml:"db-sslmode" env:"DB_SSLMODE"`
 }
 
-//redis congig
+// redis congig
 type RedisConfig struct {
 	Host     string `yaml:"redis-host" env:"REDIS_HOST" env-required:"true"`
 	Port     string `yaml:"redis-port" env:"REDIS_PORT" env-required:"true"`
@@ -32,13 +32,12 @@ type RedisConfig struct {
 
 type Config struct {
 	Env         string `yaml:"env" env:"ENV" env-required:"true"`
-	StoragePath string `yaml:"storage-path" env:"STORAGE_PATH" env-required:"true"`
 	HTTPServer  `yaml:"http-server" env-required:"true"`
 	DBConfig    `yaml:"db-config" env-required:"true"`
 	RedisConfig `yaml:"redis-config"`
 }
 
-//loader to load the config parameters
+// loader to load the config parameters
 func MustLoad() *Config {
 	var configPath string
 

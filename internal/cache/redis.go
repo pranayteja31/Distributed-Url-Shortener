@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"log"
 	"pranayteja31/Urlshortener/internal/config"
 	"time"
 
@@ -23,6 +24,6 @@ func NewRedisClient(cfg *config.RedisConfig) (*redis.Client, error) {
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, err
 	}
-	fmt.Println("Redis Connected Successfully!")
+	log.Println("Redis Connected Successfully!")
 	return client, nil
 }

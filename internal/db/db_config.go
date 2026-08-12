@@ -37,6 +37,6 @@ func DB_connection() *sqlx.DB {
 	}
 
 	DB = dbConn
-	fmt.Println("Successfully connected to PostgreSQL using environment variables!")
+	log.Println("Successfully connected to PostgreSQL using environment variables!")
 	return dbConn
 }
