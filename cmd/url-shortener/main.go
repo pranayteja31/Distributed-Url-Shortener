@@ -27,8 +27,6 @@ import (
 	"pranayteja31/Urlshortener/internal/metrics"
 )
 
-
-
 func main() {
 	cfg := config.MustLoad()
 
@@ -36,15 +34,15 @@ func main() {
 	defer dbConn.Close()
 	//analytics
 	clickRepo := repository.NewClickRepository(dbConn)
-	analyticsWorker := analytics.NewWorker(clickRepo,100)
+	analyticsWorker := analytics.NewWorker(clickRepo, 100)
 
 	Workerctx, cancelWorker := context.WithCancel(context.Background())
 	defer cancelWorker()
 
 	go analyticsWorker.Start(Workerctx)
-	
+
 	//init Redis
-	redisClient,err := cache.NewRedisClient(&cfg.RedisConfig)
+	redisClient, err := cache.NewRedisClient(&cfg.RedisConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -63,26 +61,26 @@ func main() {
 	//register repos with db
 	repo := repository.NewRepository(dbConn)
 	//register services with repos
-	services := services.NewURLServices(repo,cacheStore,analyticsWorker)
+	services := services.NewURLServices(repo, cacheStore, analyticsWorker)
 	//register handlers with the services
 	handlers := handlers.NewHandler(services)
 
 	//registering the routers with handlers
-	routes.RegisterRoutes(router, handlers,redisClient)
+	routes.RegisterRoutes(router, handlers, redisClient)
 
 	//server
 	server := &http.Server{
-		Addr: cfg.HTTPServer.Addr,
+		Addr:    cfg.HTTPServer.Addr,
 		Handler: router,
 	}
 
 	//listen for the interrupts
-	stop := make(chan os.Signal,1)
-	signal.Notify(stop,os.Interrupt,syscall.SIGTERM)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(stop)
 	//start the http server
-	go func ()  {
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err,http.ErrServerClosed) {
+	go func() {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			panic(err)
 		}
 	}()
@@ -91,10 +89,10 @@ func main() {
 	<-stop
 	fmt.Println("shutting down the server")
 	//stopping the server
-	shutdownCtx,cancelShutdown := context.WithTimeout(context.Background(),10*time.Second)
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelShutdown()
 
-	if err := server.Shutdown(shutdownCtx);err != nil {
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		panic(err)
 	}
 

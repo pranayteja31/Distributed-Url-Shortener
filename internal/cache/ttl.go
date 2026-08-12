@@ -4,7 +4,7 @@ import "time"
 
 const MaxCacheTTL = time.Hour
 
-func URLTTL(expiresAt *time.Time)time.Duration {
+func URLTTL(expiresAt *time.Time) time.Duration {
 	//no expiry
 	if expiresAt == nil {
 		return 30 * time.Minute

@@ -18,30 +18,30 @@ import (
 //custom errors
 var (
 	ErrURLNotFound = errors.New("url not found")
-	ErrURLExpired = errors.New("url has expired")
+	ErrURLExpired  = errors.New("url has expired")
 )
 
 //struct
 type URLServices struct {
-	repo *repository.URLRepository
-	cache cache.Cache
+	repo            *repository.URLRepository
+	cache           cache.Cache
 	analyticsWorker *analytics.Worker
 }
 
 //constructor
 func NewURLServices(repo *repository.URLRepository, cache cache.Cache, analyticsWorker *analytics.Worker) *URLServices {
 	return &URLServices{
-		repo: repo,
-		cache: cache,
+		repo:            repo,
+		cache:           cache,
 		analyticsWorker: analyticsWorker,
 	}
 }
 
 //service of url
-func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL,error) {
+func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL, error) {
 	//validate url
-	if err:= utils.ValidateURL(originalURL); err != nil {
-		return nil,err
+	if err := utils.ValidateURL(originalURL); err != nil {
+		return nil, err
 	}
 	// Generate a unique short code
 	var shortCode string
@@ -51,10 +51,10 @@ func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL,e
 
 		existing, err := s.repo.FindByShortCode(shortCode)
 		if err != nil {
-			if errors.Is(err,sql.ErrNoRows) {
+			if errors.Is(err, sql.ErrNoRows) {
 				break
 			}
-			return nil,err
+			return nil, err
 		}
 
 		if existing == nil {
@@ -73,9 +73,9 @@ func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL,e
 		ClickCount:  0,
 	}
 	err := s.repo.Create(&newURL)
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 	//redis cache of the new url created
 	ctx := context.Background()
 
@@ -84,62 +84,62 @@ func (s *URLServices) CreateShortURL(originalURL string, exp int) (*models.URL,e
 		ttl := cache.URLTTL(newURL.ExpiresAt)
 		if ttl > 0 {
 			_ = s.cache.Set(
-			ctx,
-			cache.URLKey(newURL.ShortCode),
-			data,
-			ttl,
+				ctx,
+				cache.URLKey(newURL.ShortCode),
+				data,
+				ttl,
 			)
 		}
-		
+
 	}
-	return &newURL,nil
+	return &newURL, nil
 }
+
 //get url
-func (s *URLServices) GetURL(id int64) (*models.URL,error) {
-	url,err := s.repo.FindByID(id)
+func (s *URLServices) GetURL(id int64) (*models.URL, error) {
+	url, err := s.repo.FindByID(id)
 	if err != nil {
-		if errors.Is(err,sql.ErrNoRows){
-			return nil,ErrURLNotFound
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrURLNotFound
 		}
-		return nil,err
+		return nil, err
 	}
 	if url == nil {
 		return nil, ErrURLNotFound
 	}
-	return url,nil
+	return url, nil
 }
 
 //5.updation of the url
-func (s *URLServices) UpdateURL(url *models.URL,exp int) (*models.URL, error) {
+func (s *URLServices) UpdateURL(url *models.URL, exp int) (*models.URL, error) {
 	//validate url
-	if err:= utils.ValidateURL(url.OriginalURL); err != nil {
-		return nil,err
+	if err := utils.ValidateURL(url.OriginalURL); err != nil {
+		return nil, err
 	}
 	//
-	existingUrl,err := s.repo.FindByID(url.ID)
+	existingUrl, err := s.repo.FindByID(url.ID)
 	if err != nil {
-		if errors.Is(err,sql.ErrNoRows){
-			return nil,ErrURLNotFound
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrURLNotFound
 		}
-		return nil,err
+		return nil, err
 	}
 	if existingUrl == nil {
 		return nil, ErrURLNotFound
 	}
 	existingUrl.OriginalURL = url.OriginalURL
-	
+
 	expiresAt := time.Now().Add(time.Duration(exp) * 24 * time.Hour)
 	existingUrl.ExpiresAt = &expiresAt
 
-	
 	err = s.repo.Update(existingUrl)
-	if err != nil{
-		return nil,err
+	if err != nil {
+		return nil, err
 	}
 	ctx := context.Background()
 
-	_ = s.cache.Delete(ctx,cache.URLKey(existingUrl.ShortCode))
-	return existingUrl,nil
+	_ = s.cache.Delete(ctx, cache.URLKey(existingUrl.ShortCode))
+	return existingUrl, nil
 }
 
 //6. delete created url
@@ -147,7 +147,7 @@ func (s *URLServices) DeleteURL(id int64) error {
 
 	url, err := s.repo.FindByID(id)
 	if err != nil {
-		if errors.Is(err,sql.ErrNoRows){
+		if errors.Is(err, sql.ErrNoRows) {
 			return ErrURLNotFound
 		}
 		return err
@@ -157,7 +157,7 @@ func (s *URLServices) DeleteURL(id int64) error {
 	}
 	err = s.repo.Delete(id)
 	if err != nil {
-		if errors.Is(err,sql.ErrNoRows){
+		if errors.Is(err, sql.ErrNoRows) {
 			return ErrURLNotFound
 		}
 		return err
@@ -172,31 +172,32 @@ func (s *URLServices) DeleteURL(id int64) error {
 
 	return nil
 }
+
 //7. list all the urls
 func (s *URLServices) ListURLs() ([]models.URL, error) {
 	return s.repo.List()
 }
 
 //8. increment the count when somebody clicks it
-func (s *URLServices) RedirectURL(shortCode string,ipAddress string,userAgent string, referer string) (string, error) {
+func (s *URLServices) RedirectURL(shortCode string, ipAddress string, userAgent string, referer string) (string, error) {
 	//redis cache logic
 	ctx := context.Background()
 	key := cache.URLKey(shortCode)
 
-	cacheData,found, err := s.cache.Get(ctx,key)
+	cacheData, found, err := s.cache.Get(ctx, key)
 	if err == nil && found {
 		metrics.CacheHits.Inc()
 		var url models.URL
-		if err:= json.Unmarshal(cacheData,&url); err == nil{
+		if err := json.Unmarshal(cacheData, &url); err == nil {
 
 			fmt.Println("CACHE HIT → Redis:", shortCode)
 
-			if url.ExpiresAt != nil && time.Now().After(*url.ExpiresAt){
-				_ = s.cache.Delete(ctx,key)
+			if url.ExpiresAt != nil && time.Now().After(*url.ExpiresAt) {
+				_ = s.cache.Delete(ctx, key)
 				return "", ErrURLExpired
 			}
-			if err:= s.repo.IncrementCount(url.ID); err != nil {
-				return "",err
+			if err := s.repo.IncrementCount(url.ID); err != nil {
+				return "", err
 			}
 			// Record analytics asynchronously.
 			if s.analyticsWorker != nil {
@@ -210,7 +211,7 @@ func (s *URLServices) RedirectURL(shortCode string,ipAddress string,userAgent st
 
 				s.analyticsWorker.Record(click)
 			}
-			return url.OriginalURL,nil
+			return url.OriginalURL, nil
 		}
 	}
 	metrics.CacheMisses.Inc()
@@ -259,7 +260,7 @@ func (s *URLServices) RedirectURL(shortCode string,ipAddress string,userAgent st
 	if err == nil {
 		ttl := cache.URLTTL(urlDetails.ExpiresAt)
 		if ttl > 0 {
-			_ = s.cache.Set(ctx,key,data,ttl)
+			_ = s.cache.Set(ctx, key, data, ttl)
 		}
 	}
 	//return from postgreSql server

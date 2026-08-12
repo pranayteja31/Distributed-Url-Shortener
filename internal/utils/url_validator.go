@@ -9,11 +9,11 @@ import (
 const MaxURLLength = 2048
 
 var (
-	ErrEmptyURL           = errors.New("URL cannot be empty")
-	ErrURLTooLong         = errors.New("URL exceeds maximum length")
-	ErrInvalidURL         = errors.New("invalid URL")
-	ErrUnsupportedScheme  = errors.New("unsupported URL scheme")
-	ErrMissingURLHost     = errors.New("URL host is missing")
+	ErrEmptyURL          = errors.New("URL cannot be empty")
+	ErrURLTooLong        = errors.New("URL exceeds maximum length")
+	ErrInvalidURL        = errors.New("invalid URL")
+	ErrUnsupportedScheme = errors.New("unsupported URL scheme")
+	ErrMissingURLHost    = errors.New("URL host is missing")
 )
 
 // ValidateURL validates a URL before it enters the business logic.

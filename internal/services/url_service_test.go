@@ -14,6 +14,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
 )
+
 type mockCache struct {
 	deleteCalled bool
 	deletedKey   string
@@ -469,18 +470,18 @@ func TestURLServices_CreateShortURL_Success(t *testing.T) {
 
 	// Create URL.
 	mock.ExpectQuery(
-	`(?s)INSERT INTO urls\(\s*short_code,\s*original_url,\s*created_at,\s*expires_at,\s*click_count\s*\)\s*VALUES \(\$1,\$2,\$3,\$4,\$5\)\s*RETURNING id;`,
-).
-	WithArgs(
-		sqlmock.AnyArg(),
-		"https://example.com",
-		sqlmock.AnyArg(),
-		sqlmock.AnyArg(),
-		0,
+		`(?s)INSERT INTO urls\(\s*short_code,\s*original_url,\s*created_at,\s*expires_at,\s*click_count\s*\)\s*VALUES \(\$1,\$2,\$3,\$4,\$5\)\s*RETURNING id;`,
 	).
-	WillReturnRows(
-		sqlmock.NewRows([]string{"id"}).AddRow(20),
-	)
+		WithArgs(
+			sqlmock.AnyArg(),
+			"https://example.com",
+			sqlmock.AnyArg(),
+			sqlmock.AnyArg(),
+			0,
+		).
+		WillReturnRows(
+			sqlmock.NewRows([]string{"id"}).AddRow(20),
+		)
 	url, err := service.CreateShortURL(
 		"https://example.com",
 		30,
@@ -1008,6 +1009,7 @@ func TestURLServices_RedirectURL_NotFound(t *testing.T) {
 		t.Errorf("unfulfilled expectations: %v", err)
 	}
 }
+
 // ============================================================
 // REDIRECT URL - CACHE ERROR
 // ============================================================
@@ -1155,12 +1157,9 @@ func TestURLServices_RedirectURL_IncrementCountError(t *testing.T) {
 // GET URL - SUCCESS
 // ============================================================
 
-
-
 // ============================================================
 // GET URL - NOT FOUND
 // ============================================================
-
 
 // ============================================================
 // LIST URLS - SUCCESS

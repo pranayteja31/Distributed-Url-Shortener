@@ -20,19 +20,19 @@ type URLService interface {
 	DeleteURL(id int64) error
 }
 
-//struct
+// struct
 type URLHandler struct {
 	service URLService
 }
 
-//constructor
+// constructor
 func NewHandler(service URLService) *URLHandler {
 	return &URLHandler{
 		service: service,
 	}
 }
 
-//creation
+// creation
 func (h *URLHandler) CreateShortUrl(c *gin.Context) {
 	orgUrl := c.PostForm("orgUrl")
 	if orgUrl == "" {
@@ -94,7 +94,7 @@ func (h *URLHandler) CreateShortUrl(c *gin.Context) {
 
 }
 
-//redirect
+// redirect
 func (h *URLHandler) Redirect(c *gin.Context) {
 	shortCode := c.Param("shortCode")
 
@@ -131,7 +131,7 @@ func (h *URLHandler) Redirect(c *gin.Context) {
 
 }
 
-//get url by id
+// get url by id
 func (h *URLHandler) GetUrl(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -159,7 +159,7 @@ func (h *URLHandler) GetUrl(c *gin.Context) {
 
 }
 
-//list all available urls
+// list all available urls
 func (h *URLHandler) ListUrls(c *gin.Context) {
 	UrlList, err := h.service.ListURLs()
 	if err != nil {
@@ -169,7 +169,7 @@ func (h *URLHandler) ListUrls(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "All URLs fetched successfully", "data": UrlList})
 }
 
-//update url details
+// update url details
 func (h *URLHandler) UpdateUrl(c *gin.Context) {
 	idStr := c.Param("id")
 	orgUrl := c.PostForm("orgUrl")
@@ -243,7 +243,7 @@ func (h *URLHandler) UpdateUrl(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "URL Updated Successful", "data": updateUrl})
 }
 
-//delete url
+// delete url
 func (h *URLHandler) DeleteUrl(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)

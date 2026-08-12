@@ -19,27 +19,27 @@ func RateLimiter(redisClient *redis.Client) gin.HandlerFunc {
 		ctx := c.Request.Context()
 		clientIP := c.ClientIP()
 
-		key := fmt.Sprintf("rate_limiter:%s",clientIP)
+		key := fmt.Sprintf("rate_limiter:%s", clientIP)
 
-		count,err := redisClient.Incr(ctx,key).Result()
+		count, err := redisClient.Incr(ctx, key).Result()
 		if err != nil {
 			c.Next()
-			return 
+			return
 		}
 		//set 1 min window expiry
 		if count == 1 {
-			if err := redisClient.Expire(ctx,key,window).Err(); err != nil {
+			if err := redisClient.Expire(ctx, key, window).Err(); err != nil {
 				c.Next()
-				return 
+				return
 			}
 		}
 		//request limit exceeded
-		if count > requestLimit{
-			c.JSON(http.StatusTooManyRequests,gin.H{
+		if count > requestLimit {
+			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error": "Rate Limit Exceeded",
 			})
 			c.Abort()
-			return 
+			return
 		}
 		c.Next()
 	}
