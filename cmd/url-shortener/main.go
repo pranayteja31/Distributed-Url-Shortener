@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -85,8 +86,10 @@ func main() {
 			panic(err)
 		}
 	}()
+	fmt.Println("Server Started!")
 	//waiting for shutdown
 	<-stop
+	fmt.Println("shutting down the server")
 	//stopping the server
 	shutdownCtx,cancelShutdown := context.WithTimeout(context.Background(),10*time.Second)
 	defer cancelShutdown()
