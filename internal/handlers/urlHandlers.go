@@ -11,35 +11,46 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type URLService interface {
+	CreateShortURL(originalURL string, exp int) (*models.URL, error)
+	RedirectURL(shortCode string, ipAddress string, userAgent string, referer string) (string, error)
+	GetURL(id int64) (*models.URL, error)
+	ListURLs() ([]models.URL, error)
+	UpdateURL(url *models.URL, exp int) (*models.URL, error)
+	DeleteURL(id int64) error
+}
+
 //struct
 type URLHandler struct {
-	service *services.URLServices
+	service URLService
 }
+
 //constructor
-func NewHandler(service *services.URLServices) *URLHandler {
+func NewHandler(service URLService) *URLHandler {
 	return &URLHandler{
 		service: service,
 	}
 }
+
 //creation
 func (h *URLHandler) CreateShortUrl(c *gin.Context) {
 	orgUrl := c.PostForm("orgUrl")
 	if orgUrl == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message":"The url field is empty", "error": "orgUrl is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "The url field is empty", "error": "orgUrl is required"})
 		return
 	}
 	expStr := c.PostForm("exp")
 	exp := 30
 	if expStr != "" {
-        exp,err := strconv.Atoi(expStr)
+		exp, err := strconv.Atoi(expStr)
 		if err != nil || exp <= 0 {
-			c.JSON(http.StatusBadRequest,gin.H{"error":"Invalid expiry"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expiry"})
 			return
 		}
-		
-    }
 
-	createdUrl, err := h.service.CreateShortURL(orgUrl,exp)
+	}
+
+	createdUrl, err := h.service.CreateShortURL(orgUrl, exp)
 	if err != nil {
 		switch {
 		case errors.Is(err, utils.ErrEmptyURL):
@@ -79,20 +90,21 @@ func (h *URLHandler) CreateShortUrl(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(http.StatusCreated,gin.H{"message": "URL created Successfully!", "data": createdUrl})
+	c.JSON(http.StatusCreated, gin.H{"message": "URL created Successfully!", "data": createdUrl})
 
 }
+
 //redirect
-func (h *URLHandler)Redirect(c *gin.Context) {
+func (h *URLHandler) Redirect(c *gin.Context) {
 	shortCode := c.Param("shortCode")
-	
+
 	if shortCode == "" {
-		c.JSON(http.StatusBadRequest,gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Shortcode required",
 		})
 		return
 	}
-	OriginalURL,err := h.service.RedirectURL(shortCode,c.ClientIP(),c.GetHeader("User-Agent"),c.GetHeader("Referer"))
+	OriginalURL, err := h.service.RedirectURL(shortCode, c.ClientIP(), c.GetHeader("User-Agent"), c.GetHeader("Referer"))
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrURLNotFound):
@@ -101,7 +113,7 @@ func (h *URLHandler)Redirect(c *gin.Context) {
 			})
 			return
 
-		case errors.Is(err, services.ErrURLNotFound):
+		case errors.Is(err, services.ErrURLExpired):
 			c.JSON(http.StatusGone, gin.H{
 				"error": "URL has expired",
 			})
@@ -115,15 +127,16 @@ func (h *URLHandler)Redirect(c *gin.Context) {
 		}
 	}
 
-	c.Redirect(http.StatusTemporaryRedirect,OriginalURL)
+	c.Redirect(http.StatusTemporaryRedirect, OriginalURL)
 
 }
+
 //get url by id
-func (h *URLHandler)GetUrl(c *gin.Context) {
+func (h *URLHandler) GetUrl(c *gin.Context) {
 	idStr := c.Param("id")
-	id,err := strconv.ParseInt(idStr,10,64)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest,gin.H{"error": "Invalid ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
 		return
 	}
 	urlDetails, err := h.service.GetURL(id)
@@ -142,45 +155,47 @@ func (h *URLHandler)GetUrl(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(http.StatusOK,gin.H{"message": "URL found", "data": urlDetails})
+	c.JSON(http.StatusOK, gin.H{"message": "URL found", "data": urlDetails})
 
 }
+
 //list all available urls
-func (h *URLHandler)ListUrls(c *gin.Context) {
+func (h *URLHandler) ListUrls(c *gin.Context) {
 	UrlList, err := h.service.ListURLs()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError,gin.H{"message": "Something went Wrong", "error": "Internal Server Error"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Something went Wrong", "error": "Internal Server Error"})
 		return
 	}
-	c.JSON(http.StatusOK,gin.H{"message":"All URLs fetched successfully", "data": UrlList})
+	c.JSON(http.StatusOK, gin.H{"message": "All URLs fetched successfully", "data": UrlList})
 }
+
 //update url details
-func (h *URLHandler)UpdateUrl(c *gin.Context) {
+func (h *URLHandler) UpdateUrl(c *gin.Context) {
 	idStr := c.Param("id")
 	orgUrl := c.PostForm("orgUrl")
 	expStr := c.PostForm("exp")
 
-	id,err := strconv.ParseInt(idStr,10,64)
-	if err != nil || id <=0 {
-		c.JSON(http.StatusBadRequest,gin.H{"error": "Invalid ID"})
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
 		return
 	}
 	if orgUrl == "" {
-		c.JSON(http.StatusBadRequest,gin.H{"error": "Original URL required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Original URL required"})
 		return
 	}
 
-	exp,err := strconv.Atoi(expStr)
+	exp, err := strconv.Atoi(expStr)
 	if err != nil || exp <= 0 {
-		c.JSON(http.StatusBadRequest,gin.H{"error": "Invalid Expiry"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Expiry"})
 		return
 	}
 
 	newUrl := models.URL{
-		ID: id,
+		ID:          id,
 		OriginalURL: orgUrl,
 	}
-	updateUrl, err := h.service.UpdateURL(&newUrl,exp)
+	updateUrl, err := h.service.UpdateURL(&newUrl, exp)
 	if err != nil {
 		switch {
 		case errors.Is(err, utils.ErrEmptyURL):
@@ -225,15 +240,15 @@ func (h *URLHandler)UpdateUrl(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(http.StatusAccepted,gin.H{"message": "Update Successful", "data": updateUrl})
+	c.JSON(http.StatusOK, gin.H{"message": "URL Updated Successful", "data": updateUrl})
 }
 
 //delete url
-func (h *URLHandler)DeleteUrl(c *gin.Context) {
+func (h *URLHandler) DeleteUrl(c *gin.Context) {
 	idStr := c.Param("id")
-	id,err := strconv.ParseInt(idStr,10,64)
-	if err != nil || id<=0 {
-		c.JSON(http.StatusBadRequest,gin.H{"error": "Invalid ID"})
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
 		return
 	}
 	if err = h.service.DeleteURL(id); err != nil {
@@ -251,6 +266,6 @@ func (h *URLHandler)DeleteUrl(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(http.StatusOK,gin.H{"message": "URL Deleted Successful"})
+	c.JSON(http.StatusOK, gin.H{"message": "URL Deleted Successful"})
 
 }
