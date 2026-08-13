@@ -25,14 +25,16 @@ type URLServices struct {
 	repo            *repository.URLRepository
 	cache           cache.Cache
 	analyticsWorker *analytics.Worker
+	cacheEnabled    bool
 }
 
 // constructor
-func NewURLServices(repo *repository.URLRepository, cache cache.Cache, analyticsWorker *analytics.Worker) *URLServices {
+func NewURLServices(repo *repository.URLRepository, cache cache.Cache, analyticsWorker *analytics.Worker,cacheEnabled bool) *URLServices {
 	return &URLServices{
 		repo:            repo,
 		cache:           cache,
 		analyticsWorker: analyticsWorker,
+		cacheEnabled: cacheEnabled,
 	}
 }
 
@@ -183,35 +185,42 @@ func (s *URLServices) RedirectURL(shortCode string, ipAddress string, userAgent 
 	ctx := context.Background()
 	key := cache.URLKey(shortCode)
 
-	cacheData, found, err := s.cache.Get(ctx, key)
-	if err == nil && found {
-		metrics.CacheHits.Inc()
-		var url models.URL
-		if err := json.Unmarshal(cacheData, &url); err == nil {
+	if s.cacheEnabled {
+		cacheData, found, err := s.cache.Get(ctx, key)
 
-			if url.ExpiresAt != nil && time.Now().After(*url.ExpiresAt) {
-				_ = s.cache.Delete(ctx, key)
-				return "", ErrURLExpired
-			}
-			if err := s.repo.IncrementCount(url.ID); err != nil {
-				return "", err
-			}
-			// Record analytics asynchronously.
-			if s.analyticsWorker != nil {
-				click := models.URLClick{
-					URLID:     url.ID,
-					ClickedAt: time.Now(),
-					IPAddress: ipAddress,
-					UserAgent: userAgent,
-					Referrer:  referer,
+		if err == nil && found {
+			metrics.CacheHits.Inc()
+
+			var url models.URL
+			if err := json.Unmarshal(cacheData, &url); err == nil {
+
+				if url.ExpiresAt != nil && time.Now().After(*url.ExpiresAt) {
+					_ = s.cache.Delete(ctx, key)
+					return "", ErrURLExpired
 				}
 
-				s.analyticsWorker.Record(click)
+				if err := s.repo.IncrementCount(url.ID); err != nil {
+					return "", err
+				}
+
+				if s.analyticsWorker != nil {
+					click := models.URLClick{
+						URLID:     url.ID,
+						ClickedAt: time.Now(),
+						IPAddress: ipAddress,
+						UserAgent: userAgent,
+						Referrer:  referer,
+					}
+
+					s.analyticsWorker.Record(click)
+				}
+
+				return url.OriginalURL, nil
 			}
-			return url.OriginalURL, nil
 		}
+
+		metrics.CacheMisses.Inc()
 	}
-	metrics.CacheMisses.Inc()
 
 	// Fetch URL details
 	postgresStart := time.Now()

@@ -29,4 +29,4 @@ COPY --from=builder /app/url-shortener /app/url-shortener
 
 EXPOSE 8082
 
-CMD ["/app/url-shortener", "-config", "/app/config/local.yaml"]
+CMD ["/app/url-shortener"]

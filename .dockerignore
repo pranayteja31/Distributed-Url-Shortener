@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Secrets / local configuration
+.env
+config/local.yaml
+
+# Go build/test artifacts
+*.exe
+*.test
+*.out
+coverage.*
+*.coverprofile
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation / unnecessary files
+README.md
+
+# Docker files not needed inside build context
+docker-compose.yml
+Dockerfile
+.dockerignore

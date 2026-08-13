@@ -1,0 +1,83 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: url-shortener-app
+    ports:
+      - "8082:8082"
+    environment:
+      ENV: dev
+      ADDRESS: 0.0.0.0:8082
+
+      CACHE_ENABLED: "true"
+
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: url_user
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: url_shortener
+      DB_SSLMODE: disable
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: 0
+      REDIS_POOLSIZE: 10
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:18
+    container_name: url-shortener-postgres
+    environment:
+      POSTGRES_USER: url_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: url_shortener
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U url_user -d url_shortener"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8
+    container_name: url-shortener-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: url-shortener-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      app:
+        condition: service_started
+  grafana:
+    image: grafana/grafana:latest
+    container_name: url-shortener-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:

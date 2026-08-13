@@ -35,6 +35,7 @@ type Config struct {
 	HTTPServer  `yaml:"http-server" env-required:"true"`
 	DBConfig    `yaml:"db-config" env-required:"true"`
 	RedisConfig `yaml:"redis-config"`
+	CacheEnabled bool `yaml:"cache-enabled" env:"CACHE_ENABLED"`
 }
 
 // loader to load the config parameters
@@ -43,25 +44,26 @@ func MustLoad() *Config {
 
 	configPath = os.Getenv("CONFIG_PATH") //first check with .env files
 	if configPath == "" {
-		//now if not found through .env
-		flags := flag.String("config", "", "path to the congig") // (the name of the flag,the default value, the usage message)
+		flags := flag.String("config", "", "path to the congig")
 		flag.Parse()
-		configPath = *flags //flags returns a pointer to the flags it got and we're storing in the configpath
-		//what if the fileds are still missing
-		if configPath == "" {
-			log.Fatal("No config path found")
-		}
-	}
-
-	//now let us fetch the data from the path given
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Fatalf("config file does not exist : %s", configPath) //fatalf is for string formating
+		configPath = *flags
 	}
 
 	var cfg Config
-	err := cleanenv.ReadConfig(configPath, &cfg) //the struct instace cfg is created and the config is read and stored in cfg
-	if err != nil {
-		log.Fatalf("cannot read the file : %s", err.Error())
+
+	if configPath != "" {
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			log.Fatalf("config file does not exist : %s", configPath) //fatalf is for string formating
+		}
+		//the struct instace cfg is created and the config is read and stored in cfg
+		if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
+			log.Fatalf("cannot read the file : %s", err.Error())
+		}
+		return &cfg
+	}
+
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
+		log.Fatalf("cannot read configuration from environment: %s", err.Error())
 	}
 
 	return &cfg

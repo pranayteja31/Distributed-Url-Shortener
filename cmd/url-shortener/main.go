@@ -60,7 +60,7 @@ func main() {
 	//register repos with db
 	repo := repository.NewRepository(dbConn)
 	//register services with repos
-	services := services.NewURLServices(repo, cacheStore, analyticsWorker)
+	services := services.NewURLServices(repo, cacheStore, analyticsWorker,cfg.CacheEnabled)
 	//register handlers with the services
 	handlers := handlers.NewHandler(services)
 
